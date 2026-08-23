@@ -2,10 +2,12 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Search, ShoppingBag, Menu, X, Wrench } from "lucide-react";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -13,6 +15,7 @@ export default function Navbar() {
     { name: "Services", href: "/services/1" },
     { name: "Add Service", href: "/add-service" },
     { name: "Checkout", href: "/checkout" },
+    { name: "Login", href: "/login" },
   ];
 
   return (
@@ -34,15 +37,20 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className="text-base font-semibold text-gray-700 hover:text-[#FF3811] transition-colors"
-              >
-                {link.name}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`text-base font-semibold transition-colors ${
+                    isActive ? "text-[#FF3811]" : "text-gray-700 hover:text-[#FF3811]"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Right Action Buttons */}
