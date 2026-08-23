@@ -2,10 +2,14 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AuthIllustration from "@/components/auth/AuthIllustration";
-import { Eye, EyeOff, Mail, User } from "lucide-react";
+import { Eye, EyeOff, Mail, User, Loader2 } from "lucide-react";
+import type { ApiResponse, IUser } from "@/types";
 
 export default function RegisterPage() {
+  const router = useRouter();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -15,6 +19,9 @@ export default function RegisterPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -22,18 +29,60 @@ export default function RegisterPage() {
       ...prev,
       [name]: value,
     }));
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("====================================");
-    console.log("🚀 REGISTER FORM SUBMITTED!");
-    console.log("Name:", formData.name);
-    console.log("Email:", formData.email);
-    console.log("Password:", formData.password);
-    console.log("Confirm Password:", formData.confirmPassword);
-    console.log("Full Object:", formData);
-    console.log("====================================");
+    setError(null);
+    setSuccess(null);
+
+    // Client-side validation: password match
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    // Client-side validation: password length
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/v1/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data: ApiResponse<Omit<IUser, "password">> = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.error || "Registration failed. Please try again.");
+        return;
+      }
+
+      // Success!
+      setSuccess("Account created successfully! Redirecting to login...");
+      setFormData({ name: "", email: "", password: "", confirmPassword: "" });
+
+      // Redirect after brief delay so user sees the success message
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -52,6 +101,20 @@ export default function RegisterPage() {
               Sign Up
             </h2>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium text-center animate-[fadeIn_0.2s_ease-out]">
+                {error}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <div className="mb-6 p-3.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium text-center animate-[fadeIn_0.2s_ease-out]">
+                {success}
+              </div>
+            )}
+
             <form onSubmit={handleRegister} className="space-y-5">
               {/* Name Field */}
               <div>
@@ -63,10 +126,11 @@ export default function RegisterPage() {
                     type="text"
                     name="name"
                     required
+                    disabled={isLoading}
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Your name"
-                    className="w-full px-4 py-3.5 rounded-lg border border-gray-200 focus:border-[#FF3811] focus:ring-2 focus:ring-[#FF3811]/20 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 bg-gray-50/30 focus:bg-white text-base"
+                    className="w-full px-4 py-3.5 rounded-lg border border-gray-200 focus:border-[#FF3811] focus:ring-2 focus:ring-[#FF3811]/20 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 bg-gray-50/30 focus:bg-white text-base disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <User className="w-5 h-5 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
@@ -82,10 +146,11 @@ export default function RegisterPage() {
                     type="email"
                     name="email"
                     required
+                    disabled={isLoading}
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Your email"
-                    className="w-full px-4 py-3.5 rounded-lg border border-gray-200 focus:border-[#FF3811] focus:ring-2 focus:ring-[#FF3811]/20 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 bg-gray-50/30 focus:bg-white text-base"
+                    className="w-full px-4 py-3.5 rounded-lg border border-gray-200 focus:border-[#FF3811] focus:ring-2 focus:ring-[#FF3811]/20 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 bg-gray-50/30 focus:bg-white text-base disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <Mail className="w-5 h-5 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
@@ -101,10 +166,11 @@ export default function RegisterPage() {
                     type={showPassword ? "text" : "password"}
                     name="password"
                     required
+                    disabled={isLoading}
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Your password"
-                    className="w-full px-4 py-3.5 rounded-lg border border-gray-200 focus:border-[#FF3811] focus:ring-2 focus:ring-[#FF3811]/20 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 bg-gray-50/30 focus:bg-white text-base pr-11"
+                    className="w-full px-4 py-3.5 rounded-lg border border-gray-200 focus:border-[#FF3811] focus:ring-2 focus:ring-[#FF3811]/20 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 bg-gray-50/30 focus:bg-white text-base pr-11 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
@@ -131,10 +197,11 @@ export default function RegisterPage() {
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     required
+                    disabled={isLoading}
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm your password"
-                    className="w-full px-4 py-3.5 rounded-lg border border-gray-200 focus:border-[#FF3811] focus:ring-2 focus:ring-[#FF3811]/20 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 bg-gray-50/30 focus:bg-white text-base pr-11"
+                    className="w-full px-4 py-3.5 rounded-lg border border-gray-200 focus:border-[#FF3811] focus:ring-2 focus:ring-[#FF3811]/20 outline-none transition-all duration-200 text-gray-800 placeholder-gray-400 bg-gray-50/30 focus:bg-white text-base pr-11 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
@@ -154,9 +221,17 @@ export default function RegisterPage() {
               {/* Primary Action Button */}
               <button
                 type="submit"
-                className="w-full py-4 bg-[#FF3811] hover:bg-[#E02E0B] text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer text-base mt-2"
+                disabled={isLoading}
+                className="w-full py-4 bg-[#FF3811] hover:bg-[#E02E0B] text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer text-base mt-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-[#FF3811] disabled:active:scale-100 flex items-center justify-center gap-2"
               >
-                Sign Up
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  "Sign Up"
+                )}
               </button>
             </form>
 
