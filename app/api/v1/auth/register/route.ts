@@ -6,6 +6,6 @@ export async function GET() {
 }
 // POST /api/v1/auth/register
 export async function POST(request: Request) {
-  return AuthController.handleRegister(request);
+  return AuthController.handlePostRegister(request);
 }
 

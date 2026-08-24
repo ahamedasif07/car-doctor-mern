@@ -14,22 +14,22 @@ export class ServiceError extends Error {
 }
 
 // ─── Register User ──────────────────────────────────────────────────────────
- async function registerUser(
-  payload: RegisterPayload
+async function registerUser(
+  userData: RegisterPayload
 ): Promise<Omit<IUser, "password">> {
   await dbConnect();
 
   // Check for existing user with same email
-  const existingUser = await User.findOne({ email: payload.email });
+  const existingUser = await User.findOne({ email: userData.email });
   if (existingUser) {
     throw new ServiceError("This email is already registered", 409);
   }
 
   // Create new user (password hashing handled by model pre-save hook)
   const user = await User.create({
-    name: payload.name,
-    email: payload.email,
-    password: payload.password,
+    name: userData.name,
+    email: userData.email,
+    password: userData.password,
   });
 
   // Return user data without password

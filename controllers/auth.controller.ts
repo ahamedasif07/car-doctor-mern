@@ -1,82 +1,109 @@
-import AuthService, {  ServiceError } from "@/services/auth.service";
-import type { RegisterPayload, ApiResponse, IUser } from "@/types";
+import AuthService, { ServiceError } from "@/services/auth.service";
+import type { RegisterPayload } from "@/types";
 
-// ─── Helper: JSON Response ───────────────────────────────────────────────────
-function jsonResponse<T>(body: ApiResponse<T>, status: number): Response {
-  return Response.json(body, { status });
+// ─── 1. Get All Users (GET /api/v1/auth/register) ────────────────────────────
+async function handleGetRegister(): Promise<Response> {
+  try {
+    // Service লেয়ার থেকে সব ইউজার নিয়ে আসা
+    const users = await AuthService.getUsers();
+
+    // সরাসরি Response.json দিয়ে রিটার্ন (200 OK)
+    return Response.json(
+      {
+        success: true,
+        message: "Users fetched successfully",
+        data: users,
+      },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
+    console.error("[Auth Controller] Get users error:", error);
+
+    // কোনো কাস্টম সার্ভিস এরর থাকলে (যেমন: 404)
+    if (error instanceof ServiceError) {
+      return Response.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: error.statusCode }
+      );
+    }
+
+    // অপ্রত্যাশিত কোনো সার্ভার এরর হলে 500
+    return Response.json(
+      {
+        success: false,
+        error: "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
 }
 
-// ─── Handle Register ─────────────────────────────────────────────────────────
- async function handleRegister(
-  request: Request
-): Promise<Response> {
+// ─── 2. Handle User Registration (POST /api/v1/auth/register) ─────────────────
+async function handlePostRegister(request: Request): Promise<Response> {
   try {
-    // Parse request body
-    const body = (await request.json()) as Partial<RegisterPayload>;
-
-    // Validate required fields
+    // Request body পার্স করা
+    const body = await request.json()
     const { name, email, password } = body;
 
-   
+    // ১. ফিল্ড ভ্যালিডেশন (কোনো ফিল্ড খালি থাকলে 400 Bad Request)
+    if (!name || !email || !password) {
+      return Response.json(
+        {
+          success: false,
+          error: "Name, email, and password are required",
+        },
+        { status: 400 }
+      );
+    }
 
-    // Delegate to service layer
-    const user = await AuthService.registerUser({ name:name!, email:email!, password:password! });
+    // ২. সার্ভিস লেয়ারে ডাটা পাঠিয়ে ইউজার তৈরি করা
+    const user = await AuthService.registerUser({
+    
+      name,
+      email,
+      password,
+    });
 
-    return jsonResponse<Omit<IUser, "password">>(
+    // ৩. সফল হলে 201 Created রেসপন্স পাঠানো
+    return Response.json(
       {
         success: true,
         message: "Registration successful",
         data: user,
       },
-      201
+      { status: 201 }
     );
   } catch (error: unknown) {
-    // Known service errors (e.g., duplicate email)
+    // সার্ভিস লেয়ারের কাস্টম এরর (যেমন: 409 Duplicate Email)
     if (error instanceof ServiceError) {
-      return jsonResponse(
-        { success: false, error: error.message },
-        error.statusCode
+      return Response.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: error.statusCode }
       );
     }
 
-    // Unexpected errors
+    // অপ্রত্যাশিত সার্ভার এরর (500)
     console.error("[Auth Controller] Registration error:", error);
-    return jsonResponse(
-      { success: false, error: "Internal server error" },
-      500
+    return Response.json(
+      {
+        success: false,
+        error: "Internal server error",
+      },
+      { status: 500 }
     );
   }
 }
 
-// ------------ get register ---------
- async function handleGetRegister(
- 
-): Promise<Response> {
-  try {
-      const getUsers = await AuthService.getUsers();
-
-      return jsonResponse<IUser[]>(
-        {
-          success: true,
-          message: "Registration successful",
-          data: getUsers,
-        },
-        201
-      );
-
-
-  }catch (error: unknown) {
-    console.error("[Auth Controller] Registration error:", error);
-    return jsonResponse(
-      { success: false, error: "Internal server error" },
-      500
-    );
-  }
-}
-
+// ─── Export Controller ────────────────────────────────────────────────────────
 const AuthController = {
-  handleRegister,
   handleGetRegister,
+  handlePostRegister,
 };
 
 export default AuthController;
