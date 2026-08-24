@@ -2,7 +2,35 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Search, Users as UsersIcon, RefreshCw } from "lucide-react";
+import {
+  Search,
+  Users as UsersIcon,
+  RefreshCw,
+  UserPlus,
+  Shield,
+  UserCheck,
+  Mail,
+  Calendar,
+  Filter,
+} from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import type { ApiResponse, IUser } from "@/types";
 
 export default function UsersPage() {
@@ -10,6 +38,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const [refreshing, setRefreshing] = useState(false);
 
   async function fetchUsers() {
@@ -24,7 +53,7 @@ export default function UsersPage() {
         setError(data.error || "Failed to fetch users");
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError("Network error. Please make sure the server and MongoDB are connected.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -40,195 +69,252 @@ export default function UsersPage() {
     fetchUsers();
   };
 
-  // Filter users by search
+  // Filter users by search and role
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return users;
-    const q = searchQuery.toLowerCase();
-    return users.filter(
-      (u) =>
+    return users.filter((u) => {
+      const matchesRole =
+        roleFilter === "all" ? true : (u.role || "user") === roleFilter;
+
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
-        (u.role || "user").toLowerCase().includes(q)
-    );
-  }, [users, searchQuery]);
+        (u.role || "user").toLowerCase().includes(q);
+
+      return matchesRole && matchesSearch;
+    });
+  }, [users, searchQuery, roleFilter]);
+
+  const adminCount = users.filter((u) => u.role === "admin").length;
+  const standardUserCount = users.filter((u) => u.role !== "admin").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in-50 duration-300">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Users Management</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {loading ? "Loading..." : `${users.length} registered user${users.length !== 1 ? "s" : ""}`}
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+              User Accounts
+            </h2>
+            <Badge variant="brand" className="font-bold">
+              {users.length} Total
+            </Badge>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            Manage authenticated accounts, permissions, and security roles.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Search */}
-          <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 border border-gray-200 focus-within:border-[#FF3811]/40 focus-within:ring-2 focus-within:ring-[#FF3811]/10 transition-all w-full sm:w-64">
-            <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400 w-full"
-            />
-          </div>
-
-          {/* Refresh Button */}
-          <button
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
             onClick={handleRefresh}
             disabled={refreshing || loading}
-            className="p-2.5 rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-[#FF3811] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Refresh users"
+            className="cursor-pointer"
           >
-            <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
-          </button>
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
         </div>
       </div>
 
-      {/* Error State */}
+      {/* Quick Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-4 border-gray-200/80 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">All Registered</p>
+              <p className="text-xl font-bold text-gray-900 mt-0.5">{users.length}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <UsersIcon className="w-5 h-5" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 border-gray-200/80 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">Administrators</p>
+              <p className="text-xl font-bold text-gray-900 mt-0.5">{adminCount}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+              <Shield className="w-5 h-5" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 border-gray-200/80 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">Standard Customers</p>
+              <p className="text-xl font-bold text-gray-900 mt-0.5">{standardUserCount}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <UserCheck className="w-5 h-5" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm font-medium">
-          {error}
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-700 text-sm font-medium flex items-center justify-between">
+          <span>{error}</span>
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            Retry
+          </Button>
         </div>
       )}
 
+      {/* Filter and Search Bar */}
+      <Card className="border-gray-200/80 shadow-xs">
+        <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Search Bar */}
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search by name, email, or role..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Role Filters */}
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+            <span className="text-xs font-semibold text-gray-500 mr-1 hidden sm:inline-flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5" /> Filter:
+            </span>
+            {(["all", "admin", "user"] as const).map((r) => (
+              <Button
+                key={r}
+                variant={roleFilter === r ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoleFilter(r)}
+                className="capitalize text-xs font-medium cursor-pointer"
+              >
+                {r === "all" ? "All Users" : r === "admin" ? "Admins" : "Customers"}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Users Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50/80">
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">
-                  #
-                </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">
-                  User
-                </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">
-                  Email
-                </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">
-                  Role
-                </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">
-                  Joined
-                </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading ? (
-                // Skeleton Loading
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    <td className="px-6 py-4">
-                      <div className="h-4 w-6 bg-gray-200 rounded animate-pulse" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse" />
-                        <div className="h-4 w-28 bg-gray-200 rounded animate-pulse" />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" />
-                    </td>
-                  </tr>
-                ))
-              ) : filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
-                        <UsersIcon className="w-7 h-7 text-gray-400" />
-                      </div>
-                      <div>
-                        <p className="text-gray-700 font-semibold">
-                          {searchQuery ? "No users found" : "No users registered yet"}
-                        </p>
-                        <p className="text-gray-400 text-sm mt-0.5">
-                          {searchQuery
-                            ? `No results for "${searchQuery}"`
-                            : "Users will appear here once they register"}
-                        </p>
-                      </div>
+      <Card className="border-gray-200/80 shadow-xs overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-16">#</TableHead>
+              <TableHead>User Profile</TableHead>
+              <TableHead>Email Contact</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Registered On</TableHead>
+              <TableHead className="text-right">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <div className="h-4 w-6 bg-gray-200 rounded animate-pulse" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-gray-200 animate-pulse" />
+                      <div className="h-4 w-28 bg-gray-200 rounded animate-pulse" />
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((user, index) => {
-                  // Generate consistent avatar colors from name
-                  const avatarColors = [
-                    "from-[#FF3811] to-[#FF6B4A]",
-                    "from-blue-500 to-blue-600",
-                    "from-emerald-500 to-emerald-600",
-                    "from-violet-500 to-violet-600",
-                    "from-amber-500 to-amber-600",
-                    "from-pink-500 to-pink-600",
-                    "from-cyan-500 to-cyan-600",
-                  ];
-                  const colorIndex = user.name.charCodeAt(0) % avatarColors.length;
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-36 bg-gray-200 rounded animate-pulse" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse ml-auto" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center">
+                      <UsersIcon className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-800 font-bold">No users matched your criteria</p>
+                      <p className="text-gray-400 text-xs mt-0.5">
+                        {searchQuery
+                          ? `No records found for "${searchQuery}"`
+                          : "No users registered yet."}
+                      </p>
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredUsers.map((user, index) => {
+                const avatarGradients = [
+                  "from-[#FF3811] to-[#FF6B4A]",
+                  "from-blue-500 to-indigo-600",
+                  "from-emerald-500 to-teal-600",
+                  "from-violet-500 to-purple-600",
+                  "from-amber-500 to-orange-600",
+                ];
+                const gradient =
+                  avatarGradients[user.name.charCodeAt(0) % avatarGradients.length];
 
-                  return (
-                    <tr
-                      key={user._id}
-                      className="hover:bg-gray-50/70 transition-colors duration-150"
-                    >
-                      {/* Serial Number */}
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-400 font-medium">
-                          {index + 1}
-                        </span>
-                      </td>
+                return (
+                  <TableRow key={user._id} className="hover:bg-slate-50/80 transition-colors">
+                    <TableCell className="text-gray-400 font-mono text-xs">
+                      {index + 1}
+                    </TableCell>
 
-                      {/* User Info */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColors[colorIndex]} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-sm`}
-                          >
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="text-sm font-semibold text-gray-800">
-                            {user.name}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Email */}
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {user.email}
-                      </td>
-
-                      {/* Role Badge */}
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${
-                            user.role === "admin"
-                              ? "bg-violet-50 text-violet-600"
-                              : "bg-sky-50 text-sky-600"
-                          }`}
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${gradient} flex items-center justify-center text-white text-xs font-bold shadow-xs`}
                         >
-                          {user.role || "user"}
-                        </span>
-                      </td>
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{user.name}</p>
+                          <p className="text-[11px] text-gray-400 font-mono">
+                            ID: {user._id?.slice(-6)}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
 
-                      {/* Joined Date */}
-                      <td className="px-6 py-4 text-sm text-gray-400">
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-gray-600 text-xs">
+                        <Mail className="w-3.5 h-3.5 text-gray-400" />
+                        {user.email}
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <Badge
+                        variant={user.role === "admin" ? "brand" : "info"}
+                        className="capitalize font-semibold"
+                      >
+                        {user.role || "user"}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-xs text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
                         {user.createdAt
                           ? new Date(user.createdAt).toLocaleDateString("en-US", {
                               month: "short",
@@ -236,33 +322,33 @@ export default function UsersPage() {
                               year: "numeric",
                             })
                           : "—"}
-                      </td>
+                      </div>
+                    </TableCell>
 
-                      {/* Status */}
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Active
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                    <TableCell className="text-right">
+                      <Badge variant="success" className="gap-1 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Active
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
 
-        {/* Table Footer */}
+        {/* Footer */}
         {!loading && filteredUsers.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-50 bg-gray-50/30">
-            <p className="text-sm text-gray-500">
-              Showing <span className="font-semibold text-gray-700">{filteredUsers.length}</span> of{" "}
-              <span className="font-semibold text-gray-700">{users.length}</span> users
-            </p>
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 text-xs text-gray-500">
+            <span>
+              Showing <strong className="text-gray-900">{filteredUsers.length}</strong> of{" "}
+              <strong className="text-gray-900">{users.length}</strong> users
+            </span>
+            <span>Database Collection: users</span>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
