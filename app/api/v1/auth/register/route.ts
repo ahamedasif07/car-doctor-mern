@@ -1,8 +1,8 @@
 import AuthController from "@/controllers/auth.controller";
 
-// get registers
+// GET /api/v1/auth/register
 export async function GET() {
-  return AuthController.handleGetRegister();
+  return AuthController.handleGetAllUsers();
 }
 // POST /api/v1/auth/register
 export async function POST(request: Request) {

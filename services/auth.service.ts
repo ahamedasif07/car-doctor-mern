@@ -1,6 +1,7 @@
+import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import type { RegisterPayload, IUser } from "@/types";
+import type { RegisterPayload, IUser, LoginPayload } from "@/types";
 
 // ─── Custom Error with Status Code ──────────────────────────────────────────
 export class ServiceError extends Error {
@@ -25,7 +26,7 @@ async function registerUser(
     throw new ServiceError("This email is already registered", 409);
   }
 
-  // Create new user (password hashing handled by model pre-save hook)
+  // Create new user (password hashing handled by model pre-save hook in models/User.ts)
   const user = await User.create({
     name: userData.name,
     email: userData.email,
@@ -43,24 +44,51 @@ async function registerUser(
   };
 }
 
-
-// get register 
- async function getUsers(): Promise<IUser[]> {
+// ─── Get All Users ──────────────────────────────────────────────────────────
+async function getUsers(): Promise<IUser[]> {
   await dbConnect();
 
-  // Check for existing user with same email
-  const existingUser = await User.find();
-  if (!existingUser) {
+  const users = await User.find();
+  if (!users || users.length === 0) {
     throw new ServiceError("Users not found", 404);
   }
 
-  return existingUser;
+  return users;
 }
 
+// ─── Login User ─────────────────────────────────────────────────────────────
+async function loginUser(
+  userData: LoginPayload
+): Promise<Omit<IUser, "password">> {
+  await dbConnect();
+
+  // Find user by email (include password for verification)
+  const user = await User.findOne({ email: userData.email });
+  if (!user) {
+    throw new ServiceError("User not found", 404);
+  }
+
+  // Compare plain password with stored bcrypt hashed password
+  const isMatch = await bcrypt.compare(userData.password, user.password);
+  if (!isMatch) {
+    throw new ServiceError("Incorrect password", 401);
+  }
+
+  // Return user data without password
+  return {
+    _id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
 
 const AuthService = {
   registerUser,
-  getUsers
+  getUsers,
+  loginUser,
 };
 
 export default AuthService;

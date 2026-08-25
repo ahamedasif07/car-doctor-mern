@@ -2,16 +2,25 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import axios from "axios";
 import AuthIllustration from "@/components/auth/AuthIllustration";
-import { Eye, EyeOff, Mail } from "lucide-react";
+import { Eye, EyeOff, Mail, Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import type { ApiResponse, IUser, LoginPayload } from "@/types";
 
 export default function LoginPage() {
-  const [formData, setFormData] = useState({
+  const router = useRouter();
+  const { login } = useAuth();
+
+  const [formData, setFormData] = useState<LoginPayload>({
     email: "",
     password: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -21,14 +30,41 @@ export default function LoginPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("====================================");
-    console.log("🚀 LOGIN FORM SUBMITTED!");
-    console.log("Email:", formData.email);
-    console.log("Password:", formData.password);
-    console.log("Full Object:", formData);
-    console.log("====================================");
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post<ApiResponse<Omit<IUser, "password">>>(
+        "/api/v1/auth/login",
+        formData
+      );
+
+      if (response.data.success && response.data.data) {
+        // 1. Save user in AuthContext & localStorage
+        login(response.data.data);
+
+        // 2. Show success toast
+        toast.success(response.data.message || "Login successful! Welcome back.");
+
+        // 3. Redirect to home page
+        setTimeout(() => {
+          router.push("/");
+        }, 800);
+      }
+    } catch (error: unknown) {
+      if (axios.isAxiosError<ApiResponse>(error)) {
+        const errorMsg =
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Invalid email or password. Please try again.";
+        toast.error(errorMsg);
+      } else {
+        toast.error("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -100,9 +136,17 @@ export default function LoginPage() {
               {/* Primary Action Button */}
               <button
                 type="submit"
-                className="w-full py-4 bg-[#FF3811] hover:bg-[#E02E0B] text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer text-base mt-2"
+                disabled={isLoading}
+                className="w-full py-4 bg-[#FF3811] hover:bg-[#E02E0B] text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer text-base mt-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Sign In
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Signing In...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
               </button>
             </form>
 

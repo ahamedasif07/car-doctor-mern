@@ -31,6 +31,11 @@ export interface RegisterPayload {
   password: string;
 }
 
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message?: string;

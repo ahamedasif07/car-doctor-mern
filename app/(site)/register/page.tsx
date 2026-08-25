@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import AuthIllustration from "@/components/auth/AuthIllustration";
 import { Eye, EyeOff, Mail, User, Loader2 } from "lucide-react";
 import type { ApiResponse, IUser } from "@/types";
@@ -21,7 +22,6 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -29,24 +29,26 @@ export default function RegisterPage() {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     if (error) setError(null);
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
 
     // Client-side validation: password match
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      const msg = "Passwords do not match";
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
     // Client-side validation: password length
     if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+      const msg = "Password must be at least 6 characters";
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -65,21 +67,26 @@ export default function RegisterPage() {
 
       const data: ApiResponse<Omit<IUser, "password">> = await res.json();
 
-      if (!res.ok || !data.success) {
-        setError(data.error || "Registration failed. Please try again.");
+      // Check for success (res.ok / status 201/200 & success: true)
+      if (res.ok && data.success) {
+        toast.success(data.message || "Registration successful! Please log in.");
+        setFormData({ name: "", email: "", password: "", confirmPassword: "" });
+
+        // Delay redirect slightly so user can clearly see the toast
+        setTimeout(() => {
+          router.push("/login");
+        }, 1200);
         return;
       }
 
-      // Success!
-      setSuccess("Account created successfully! Redirecting to login...");
-      setFormData({ name: "", email: "", password: "", confirmPassword: "" });
-
-      // Redirect after brief delay so user sees the success message
-      setTimeout(() => {
-        router.push("/login");
-      }, 1500);
+      // Handle server validation / duplicate email error
+      const errorMsg = data.error || "Registration failed. Please try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } catch {
-      setError("Network error. Please check your connection and try again.");
+      const networkError = "Network error. Please check your connection and try again.";
+      setError(networkError);
+      toast.error(networkError);
     } finally {
       setIsLoading(false);
     }
@@ -105,13 +112,6 @@ export default function RegisterPage() {
             {error && (
               <div className="mb-6 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium text-center animate-[fadeIn_0.2s_ease-out]">
                 {error}
-              </div>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <div className="mb-6 p-3.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium text-center animate-[fadeIn_0.2s_ease-out]">
-                {success}
               </div>
             )}
 

@@ -1,13 +1,13 @@
 import AuthService, { ServiceError } from "@/services/auth.service";
 import type { RegisterPayload } from "@/types";
 
-// ─── 1. Get All Users (GET /api/v1/auth/register) ────────────────────────────
-async function handleGetRegister(): Promise<Response> {
+// ─── 1. Get All Users (GET /api/v1/auth/login or /api/v1/auth/register) ─────
+async function handleGetAllUsers(): Promise<Response> {
   try {
-    // Service লেয়ার থেকে সব ইউজার নিয়ে আসা
+    // Fetch all users from service layer
     const users = await AuthService.getUsers();
 
-    // সরাসরি Response.json দিয়ে রিটার্ন (200 OK)
+    // Return successful response
     return Response.json(
       {
         success: true,
@@ -19,7 +19,7 @@ async function handleGetRegister(): Promise<Response> {
   } catch (error: unknown) {
     console.error("[Auth Controller] Get users error:", error);
 
-    // কোনো কাস্টম সার্ভিস এরর থাকলে (যেমন: 404)
+    // Handle custom service errors (e.g., 404 Not Found)
     if (error instanceof ServiceError) {
       return Response.json(
         {
@@ -30,7 +30,7 @@ async function handleGetRegister(): Promise<Response> {
       );
     }
 
-    // অপ্রত্যাশিত কোনো সার্ভার এরর হলে 500
+    // Handle unexpected server errors
     return Response.json(
       {
         success: false,
@@ -44,11 +44,11 @@ async function handleGetRegister(): Promise<Response> {
 // ─── 2. Handle User Registration (POST /api/v1/auth/register) ─────────────────
 async function handlePostRegister(request: Request): Promise<Response> {
   try {
-    // Request body পার্স করা
-    const body = await request.json()
+    // Parse request body
+    const body = await request.json();
     const { name, email, password } = body;
 
-    // ১. ফিল্ড ভ্যালিডেশন (কোনো ফিল্ড খালি থাকলে 400 Bad Request)
+    // Validate required fields
     if (!name || !email || !password) {
       return Response.json(
         {
@@ -59,25 +59,23 @@ async function handlePostRegister(request: Request): Promise<Response> {
       );
     }
 
-    // ২. সার্ভিস লেয়ারে ডাটা পাঠিয়ে ইউজার তৈরি করা
-    const user = await AuthService.registerUser({
-    
+    // Register user via service layer
+    await AuthService.registerUser({
       name,
       email,
       password,
     });
 
-    // ৩. সফল হলে 201 Created রেসপন্স পাঠানো
+    // Return created response
     return Response.json(
       {
         success: true,
         message: "Registration successful",
-        data: user,
       },
       { status: 201 }
     );
   } catch (error: unknown) {
-    // সার্ভিস লেয়ারের কাস্টম এরর (যেমন: 409 Duplicate Email)
+    // Handle custom service errors (e.g., 409 Conflict)
     if (error instanceof ServiceError) {
       return Response.json(
         {
@@ -88,8 +86,60 @@ async function handlePostRegister(request: Request): Promise<Response> {
       );
     }
 
-    // অপ্রত্যাশিত সার্ভার এরর (500)
+    // Handle unexpected server errors
     console.error("[Auth Controller] Registration error:", error);
+    return Response.json(
+      {
+        success: false,
+        error: "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// ─── 3. Handle User Login (POST /api/v1/auth/login) ───────────────────────────
+async function handlePostLogin(request: Request): Promise<Response> {
+  try {
+    // 1. Await request JSON
+    const body = await request.json();
+    const { email, password } = body;
+
+    // 2. Validate input fields
+    if (!email || !password) {
+      return Response.json(
+        {
+          success: false,
+          error: "Email and password are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    // 3. Authenticate user via service layer
+    const user = await AuthService.loginUser({ email, password });
+
+    // 4. Return successful login response
+    return Response.json(
+      {
+        success: true,
+        message: "Login successful",
+        data: user,
+      },
+      { status: 200 }
+    );
+  } catch (error: unknown) {
+    if (error instanceof ServiceError) {
+      return Response.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error("[Auth Controller] Login error:", error);
     return Response.json(
       {
         success: false,
@@ -102,8 +152,9 @@ async function handlePostRegister(request: Request): Promise<Response> {
 
 // ─── Export Controller ────────────────────────────────────────────────────────
 const AuthController = {
-  handleGetRegister,
+  handleGetAllUsers,
   handlePostRegister,
+  handlePostLogin,
 };
 
 export default AuthController;
