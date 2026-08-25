@@ -4,14 +4,14 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, ShoppingBag, Menu, X, Wrench, LogOut, LayoutDashboard, UserCheck } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthStore();
   const profileRef = useRef<HTMLDivElement>(null);
 
   // Close profile dropdown when clicking outside

@@ -228,10 +228,10 @@ sequenceDiagram
         Controller-->>Route: 200 OK + JSON { success: true, data: user }
         Route-->>UI: Response Data
         
-        %% 4. Client state update
-        UI->>Context: login(userData) কল করল
-        Context->>Browser: localStorage.setItem("car_doctor_user", ...)
-        Context->>Context: setUser(userData) [React State Update]
+        %% 4. Client state update with Zustand
+        UI->>Zustand: login(userData) [useAuthStore]
+        Zustand->>Browser: persist middleware স্বয়ংক্রিয়ভাবে localStorage এ সিঙ্ক করল
+        Zustand->>UI: Global state updated across components
         UI-->>User: সাকসেস টোস্ট ও হোমপেজে রিডাইরেক্ট!
     end
 ```
@@ -249,7 +249,7 @@ sequenceDiagram
 │ 3. [Controller]   controllers/auth.controller.ts ➔ Token & Cookie Orchestration│
 │ 4. [Service]      services/auth.service.ts       ➔ DB & Bcrypt Verify   │
 │ 5. [JWT Helper]   lib/jwt.ts                     ➔ Sign & Verify Token  │
-│ 6. [Client State] context/AuthContext.tsx        ➔ Global User State    │
+│ 6. [Global State] store/useAuthStore.ts (Zustand)➔ Auto-sync User State │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 

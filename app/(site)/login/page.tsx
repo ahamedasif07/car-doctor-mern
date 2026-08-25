@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import axios from "axios";
 import AuthIllustration from "@/components/auth/AuthIllustration";
 import { Eye, EyeOff, Mail, Loader2 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/store/useAuthStore";
 import type { ApiResponse, IUser, LoginPayload } from "@/types";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login } = useAuthStore();
 
   const [formData, setFormData] = useState<LoginPayload>({
     email: "",
