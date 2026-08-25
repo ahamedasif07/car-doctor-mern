@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import PageBanner from "@/components/shared/PageBanner";
 
 export default function AddServicePage() {
@@ -24,10 +22,8 @@ export default function AddServicePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-[#FF3811] selection:text-white">
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 space-y-10">
+    <div className="bg-white text-gray-900 font-sans selection:bg-[#FF3811] selection:text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 space-y-10">
         {/* Header Banner */}
         <PageBanner title="Add New Service" breadcrumb="Service" />
 
@@ -109,9 +105,7 @@ export default function AddServicePage() {
           </form>
         </div>
 
-      </main>
-
-      <Footer />
+      </div>
     </div>
   );
 }

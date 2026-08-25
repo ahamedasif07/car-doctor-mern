@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { generateToken } from "@/lib/jwt";
 import AuthService, { ServiceError } from "@/services/auth.service";
 import type { RegisterPayload } from "@/types";
 
@@ -119,7 +121,24 @@ async function handlePostLogin(request: Request): Promise<Response> {
     // 3. Authenticate user via service layer
     const user = await AuthService.loginUser({ email, password });
 
-    // 4. Return successful login response
+    // 4. Generate JWT Token
+    const token = generateToken({
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+    });
+
+    // 5. Set HttpOnly Cookie
+    const cookieStore = await cookies();
+    cookieStore.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: "/",
+    });
+
+    // 6. Return successful login response
     return Response.json(
       {
         success: true,
