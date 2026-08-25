@@ -182,7 +182,122 @@ app/(dashboard)/
 
 ---
 
-## 🚀 5. Getting Started & Running Locally
+## 🔐 5. JWT Authentication & HttpOnly Cookie Flow (Deep Dive)
+
+আমাদের সিস্টেমে সিকিউর এবং প্রোডাকশন-গ্রেড **JWT (JSON Web Token) + HttpOnly Cookie** অথেন্টিকেশন সিস্টেম ব্যবহার করা হয়েছে। নিচে সম্পূর্ণ ফ্লো ভিজ্যুয়াল ডায়াগ্রাম ও কোড স্টেপ দিয়ে ব্যাখ্যা করা হলো:
+
+### 🔄 End-to-End Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 👤 ইউজার (Client)
+    participant UI as 🎨 LoginPage (app/(site)/login/page.tsx)
+    participant Context as 🌐 AuthContext (context/AuthContext.tsx)
+    participant Route as 🚦 Route Handler (/api/v1/auth/login)
+    participant Controller as 📋 AuthController (auth.controller.ts)
+    participant Service as ⚙️ AuthService (auth.service.ts)
+    participant DB as 🍃 MongoDB (models/User.ts)
+    participant JWT as 🔑 JWT Helper (lib/jwt.ts)
+    participant Browser as 🍪 Browser Storage (HttpOnly Cookie & LocalStorage)
+
+    %% 1. User submits login form
+    User->>UI: ইমেইল ও পাসওয়ার্ড প্রদান করে 'Login' বাটনে ক্লিক করল
+    UI->>Route: axios.post("/api/v1/auth/login", { email, password })
+    Route->>Controller: handlePostLogin(request)
+
+    %% 2. Verification
+    Controller->>Service: loginUser({ email, password })
+    Service->>DB: User.findOne({ email })
+    DB-->>Service: ইউজার ডকুমেন্ট ফেরত দিল
+    Service->>Service: bcrypt.compare(plainPassword, hashedPassword)
+    
+    alt পাসওয়ার্ড ভুল হলে
+        Service-->>Controller: throw ServiceError("Incorrect password", 401)
+        Controller-->>UI: 401 Unauthorized Response
+        UI-->>User: লাল রঙের এরর টোস্ট মেসেজ দেখাবে
+    else পাসওয়ার্ড সঠিক হলে
+        Service-->>Controller: Sanitized User Data (password ছাড়া)
+        
+        %% 3. JWT Creation & Cookie Setting
+        Controller->>JWT: generateToken({ _id, email, role })
+        JWT-->>Controller: সাইন করা এনক্রিপ্টেড JWT Token (7d মেয়াদ)
+        
+        Note over Controller,Browser: cookies().set('token', token, { httpOnly: true, ... })
+        Controller->>Browser: রেসপন্সে Set-Cookie হেডারে HttpOnly Cookie সেট করল
+        Controller-->>Route: 200 OK + JSON { success: true, data: user }
+        Route-->>UI: Response Data
+        
+        %% 4. Client state update
+        UI->>Context: login(userData) কল করল
+        Context->>Browser: localStorage.setItem("car_doctor_user", ...)
+        Context->>Context: setUser(userData) [React State Update]
+        UI-->>User: সাকসেস টোস্ট ও হোমপেজে রিডাইরেক্ট!
+    end
+```
+
+---
+
+### 🧩 স্টেপ-বাই-স্টেপ ফাইল ও কোডের ভূমিকা
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        JWT AUTHENTICATION LIFECYCLE                    │
+├────────────────────────────────────────────────────────────────────────┤
+│ 1. [UI]           app/(site)/login/page.tsx      ➔ Form submit & API call│
+│ 2. [Route]        app/api/v1/auth/login/route.ts ➔ Request Forwarding   │
+│ 3. [Controller]   controllers/auth.controller.ts ➔ Token & Cookie Orchestration│
+│ 4. [Service]      services/auth.service.ts       ➔ DB & Bcrypt Verify   │
+│ 5. [JWT Helper]   lib/jwt.ts                     ➔ Sign & Verify Token  │
+│ 6. [Client State] context/AuthContext.tsx        ➔ Global User State    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+#### ধাপ ১: ইউজার ক্রেডেনশিয়াল যাচাই (`services/auth.service.ts`)
+- ডাটাবেজে ইউজার খুঁজে বের করা হয় এবং `bcrypt.compare()` দিয়ে পাসওয়ার্ড চেক করা হয়।
+- পাসওয়ার্ড ঠিক থাকলে পাসওয়ার্ড ফিল্ড বাদ দিয়ে নিরাপদ `SafeUser` অবজেক্ট কন্ট্রোলারে পাঠানো হয়।
+
+#### ধাপ ২: JWT টোকেন জেনারেশন (`lib/jwt.ts`)
+- `generateToken({ _id, email, role })` দিয়ে ইউজারের আইডি ও রোল এনক্রিপ্ট করে সিক্রেট কি (`JWT_SECRET`) দিয়ে একটি ৭ দিনের মেয়াদের টোকেন তৈরি করা হয়।
+
+#### ধাপ ৩: HttpOnly Cookie সেট করা (`controllers/auth.controller.ts`)
+```typescript
+const cookieStore = await cookies();
+cookieStore.set("token", token, {
+  httpOnly: true,                               // 🛡️ XSS Attack থেকে বাঁচায় (জাভাস্ক্রিপ্ট অ্যাক্সেস নিষিদ্ধ)
+  secure: process.env.NODE_ENV === "production", // 🔒 লাইভ সার্ভারে শুধুমাত্র HTTPS-এ যাবে
+  sameSite: "strict",                           // ⛔ CSRF অ্যাটাক ঠেকায় (বাইরের সাইট থেকে রিকোয়েস্টে কুকি যাবে না)
+  maxAge: 7 * 24 * 60 * 60,                     // ⏳ মেয়াদ ৭ দিন
+  path: "/",                                    // 🌐 পুরো ওয়েবসাইটের সব রুটে কাজ করবে
+});
+```
+
+#### ধাপ ৪: ক্লায়েন্ট সাইড স্টেট ও লোকালস্টোরেজ (`context/AuthContext.tsx`)
+- রেসপন্স পাওয়ার পর UI-তে ইউজারের নাম/ছবি দেখানোর জন্য `login(userData)` কল করা হয়।
+- `localStorage`-এ প্রোফাইল রাখা হয় যেন পেজ রিফ্রেশ দিলেও ইউজারের নাম মুছে না যায়।
+- আর আসল **লগইন সিকিউরিটি টোকেন** থাকে ব্রাউজারের সুরক্ষিত `HttpOnly Cookie`-তে।
+
+---
+
+### 🛡️ কীভাবে ব্যাকএন্ডে রুট বা API প্রটেক্ট করা হয়?
+
+```mermaid
+flowchart TD
+    ClientReq["🌐 Client Request<br/>(e.g., POST /api/v1/checkout)"] --> AutoCookie["🍪 Browser Automatically<br/>Sends 'token' Cookie"]
+    AutoCookie --> ReadCookie["📥 Read Cookie<br/>cookies().get('token')"]
+    ReadCookie --> HasToken{"টোকেন আছে কি?"}
+
+    HasToken -- না --> Err401["⛔ 401 Unauthorized<br/>'Please Login First'"]
+    HasToken -- হ্যাঁ --> Verify["🔑 verifyToken(token)<br/>(lib/jwt.ts)"]
+
+    Verify --> Valid{"টোকেন ভ্যালিড?"}
+    Valid -- ভুল বা মেয়াদোত্তীর্ণ --> ErrToken["⛔ 401 Invalid Token"]
+    Valid -- সঠিক --> Success["✅ Authorized Action Execute<br/>(Create Order / Update User)"]
+```
+
+---
+
+## 🚀 6. Getting Started & Running Locally
 
 ### ১. ডিপেন্ডেন্সি ইনস্টল করুন:
 ```bash
@@ -192,6 +307,7 @@ npm install
 ### ২. এনভায়রনমেন্ট ভ্যারিয়েবল সেট করুন (`.env.local`):
 ```env
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.example.mongodb.net/carDoctor?retryWrites=true&w=majority&appName=Cluster0
+JWT_SECRET=your_super_secret_jwt_key_car_doctor_2026
 ```
 
 ### ৩. ডেভেলপমেন্ট সার্ভার চালু করুন:
@@ -201,6 +317,7 @@ npm run dev
 
 ### ৪. গুরুত্বপূর্ণ লিঙ্কসমূহ:
 - **Home Page**: [http://localhost:3000](http://localhost:3000)
+- **Login Page**: [http://localhost:3000/login](http://localhost:3000/login)
 - **Register Page**: [http://localhost:3000/register](http://localhost:3000/register)
 - **Admin Dashboard Overview**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
 - **Admin Dashboard Users**: [http://localhost:3000/dashboard/users](http://localhost:3000/dashboard/users)
