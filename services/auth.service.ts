@@ -85,10 +85,51 @@ async function loginUser(
   };
 }
 
+// ─── Login Admin (via Username & Password) ───────────────────────────────────
+async function loginAdmin(
+  adminData: { username: string; password: string }
+): Promise<Omit<IUser, "password">> {
+  await dbConnect();
+
+  const formattedUsername = adminData.username.toLowerCase().trim();
+
+  // Find user by username or email
+  const user = await User.findOne({
+    $or: [{ username: formattedUsername }, { email: formattedUsername }],
+  });
+
+  if (!user) {
+    throw new ServiceError("Admin account not found", 404);
+  }
+
+  // Ensure the account has admin role
+  if (user.role !== "admin") {
+    throw new ServiceError("Access denied. Admin privileges required.", 403);
+  }
+
+  // Compare password
+  const isMatch = await bcrypt.compare(adminData.password, user.password);
+  if (!isMatch) {
+    throw new ServiceError("Invalid admin credentials", 401);
+  }
+
+  // Return user data without password
+  return {
+    _id: user._id.toString(),
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
 const AuthService = {
   registerUser,
   getUsers,
   loginUser,
+  loginAdmin,
 };
 
 export default AuthService;

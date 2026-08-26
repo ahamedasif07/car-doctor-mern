@@ -18,6 +18,7 @@ export interface IService {
 export interface IUser {
   _id?: string;
   name: string;
+  username?: string;
   email: string;
   password?: string;
   role?: "user" | "admin";
@@ -27,6 +28,7 @@ export interface IUser {
 
 export interface RegisterPayload {
   name: string;
+  username?: string;
   email: string;
   password: string;
 }
@@ -36,9 +38,15 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface AdminLoginPayload {
+  username: string;
+  password: string;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message?: string;
   data?: T;
   error?: string;
 }
+

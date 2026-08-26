@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 // ─── Document Interface ──────────────────────────────────────────────────────
 export interface IUserDocument extends Document {
   name: string;
+  username?: string;
   email: string;
   password: string;
   role: "user" | "admin";
@@ -20,6 +21,15 @@ const UserSchema = new Schema<IUserDocument>(
       trim: true,
       minlength: [2, "Name must be at least 2 characters"],
       maxlength: [50, "Name cannot exceed 50 characters"],
+    },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      lowercase: true,
+      minlength: [3, "Username must be at least 3 characters"],
+      maxlength: [30, "Username cannot exceed 30 characters"],
     },
     email: {
       type: String,
@@ -43,6 +53,7 @@ const UserSchema = new Schema<IUserDocument>(
       default: "user",
     },
   },
+
   {
     timestamps: true,
   }

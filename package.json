@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "seed:admin": "npx tsx --env-file=.env.local scripts/createAdmin.ts",
+    "create:admin": "npx tsx --env-file=.env.local scripts/createAdmin.ts",
     "lint": "eslint"
   },
   "dependencies": {
@@ -14,6 +16,7 @@
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "firebase": "^12.18.0",
+    "jose": "^6.2.10",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.33.0",
     "mongoose": "^9.9.3",

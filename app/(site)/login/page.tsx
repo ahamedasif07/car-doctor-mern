@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import axios from "axios";
 import AuthIllustration from "@/components/auth/AuthIllustration";
@@ -12,6 +12,8 @@ import type { ApiResponse, IUser, LoginPayload } from "@/types";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect");
   const { login } = useAuthStore();
 
   const [formData, setFormData] = useState<LoginPayload>({
@@ -41,18 +43,28 @@ export default function LoginPage() {
       );
 
       if (response.data.success && response.data.data) {
+        const user = response.data.data;
+
         // 1. Save user in AuthContext & localStorage
-        login(response.data.data);
+        login(user);
 
         // 2. Show success toast
         toast.success(response.data.message || "Login successful! Welcome back.");
 
-        // 3. Redirect to home page
+        // 3. Determine redirect target (redirect param > admin dashboard > home)
+        const targetRoute = redirectUrl
+          ? redirectUrl
+          : user.role === "admin"
+          ? "/dashboard"
+          : "/";
+
         setTimeout(() => {
-          router.push("/");
-        }, 800);
+          router.push(targetRoute);
+          router.refresh();
+        }, 600);
       }
     } catch (error: unknown) {
+
       if (axios.isAxiosError<ApiResponse>(error)) {
         const errorMsg =
           error.response?.data?.error ||
