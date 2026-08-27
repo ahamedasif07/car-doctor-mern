@@ -2,7 +2,7 @@
 
 export interface IService {
   _id?: string;
-  service_id: string;
+  service_id?: string;
   title: string;
   img: string;
   price: string | number;
@@ -14,6 +14,7 @@ export interface IService {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
 
 export interface IUser {
   _id?: string;

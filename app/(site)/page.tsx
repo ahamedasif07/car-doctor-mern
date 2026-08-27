@@ -6,13 +6,21 @@ import Products from "@/components/home/Products";
 import Team from "@/components/home/Team";
 import Features from "@/components/home/Features";
 import Testimonial from "@/components/home/Testimonial";
+import ServiceService from "@/services/service.service";
 
-export default function Home() {
+export default async function Home() {
+  let services = [];
+  try {
+    services = await ServiceService.getAllServices();
+  } catch (error) {
+    console.error("Failed to load services for home page:", error);
+  }
+
   return (
     <>
       <Hero />
       <About />
-      <Services />
+      <Services services={services} />
       <InfoStrip />
       <Products />
       <Team />

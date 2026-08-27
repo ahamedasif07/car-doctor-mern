@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-
+import type { IUser } from "@/types";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default_car_doctor_secret_key_2026";
 

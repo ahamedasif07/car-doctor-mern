@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
 import {
   LayoutDashboard,
   Users,
@@ -18,6 +19,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/store/useAuthStore";
+import { toast } from "sonner";
+import axios from "axios";
 
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -29,8 +33,24 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await axios.get("/api/v1/auth/logout");
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      logout();
+      toast.success("Admin signed out successfully");
+      router.push("/admin/login");
+      router.refresh();
+    }
+  };
+
 
   return (
     <>
@@ -206,33 +226,38 @@ export default function Sidebar() {
             <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-800/40 border border-slate-700/40 hover:bg-slate-800/80 transition-colors">
               <div className="relative">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF3811] to-[#FF7043] flex items-center justify-center text-white text-xs font-black shadow-sm">
-                  AD
+                  {user?.name ? user.name.slice(0, 2).toUpperCase() : "AD"}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white truncate">Super Admin</p>
-                <p className="text-[11px] text-slate-400 truncate">admin@cardoctor.com</p>
+                <p className="text-xs font-bold text-white truncate">
+                  {user?.name || "Super Admin"}
+                </p>
+                <p className="text-[11px] text-slate-400 truncate">
+                  {user?.email || "admin@cardoctor.com"}
+                </p>
               </div>
-              <Link
-                href="/"
+              <button
+                onClick={handleLogout}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                title="Exit Dashboard"
+                title="Sign Out of Dashboard"
               >
                 <LogOut className="w-4 h-4" />
-              </Link>
+              </button>
             </div>
           ) : (
-            <Link
-              href="/"
-              className="flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-              title="Exit to Site"
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+              title="Sign Out of Dashboard"
             >
               <LogOut className="w-5 h-5" />
-            </Link>
+            </button>
           )}
         </div>
       </aside>
     </>
   );
 }
+

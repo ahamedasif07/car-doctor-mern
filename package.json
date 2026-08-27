@@ -8,6 +8,7 @@
     "start": "next start",
     "seed:admin": "npx tsx --env-file=.env.local scripts/createAdmin.ts",
     "create:admin": "npx tsx --env-file=.env.local scripts/createAdmin.ts",
+    "seed:services": "npx tsx --env-file=.env.local scripts/seedServices.ts",
     "lint": "eslint"
   },
   "dependencies": {

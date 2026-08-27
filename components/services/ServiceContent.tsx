@@ -3,54 +3,63 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Play } from "lucide-react";
+import type { IService } from "@/types";
 
-export default function ServiceContent() {
+interface ServiceContentProps {
+  service?: IService;
+}
+
+export default function ServiceContent({ service }: ServiceContentProps) {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
-  const featureBoxes = [
+  const defaultFeatureBoxes = [
     {
-      title: "Instant Car Services",
-      desc: "It Uses A Dictionary Of Over 200 Latin Words, Combined With A Model Sentence Structure.",
+      name: "Instant Car Services",
+      details: "It Uses A Dictionary Of Over 200 Latin Words, Combined With A Model Sentence Structure.",
     },
     {
-      title: "24/7 Quality Service",
-      desc: "It Uses A Dictionary Of Over 200 Latin Words, Combined With A Model Sentence Structure.",
+      name: "24/7 Quality Service",
+      details: "Round-the-clock emergency support with certified technicians and precision diagnostic tools.",
     },
     {
-      title: "Easy Customer Service",
-      desc: "It Uses A Dictionary Of Over 200 Latin Words, Combined With A Model Sentence Structure.",
+      name: "Easy Customer Service",
+      details: "Hassle-free booking, transparent estimates, and friendly assistance every step of the way.",
     },
     {
-      title: "Quality Cost Service",
-      desc: "It Uses A Dictionary Of Over 200 Latin Words, Combined With A Model Sentence Structure.",
+      name: "Quality Cost Service",
+      details: "Affordable competitive pricing with 100% genuine parts and lifetime workmanship warranty.",
     },
   ];
+
+  const facilities = (service?.facility && service.facility.length > 0)
+    ? service.facility
+    : defaultFeatureBoxes;
 
   const steps = [
     {
       number: "01",
       title: "STEP ONE",
-      desc: "It Uses A Dictionary Of Over 200...",
+      desc: "Book inspection and receive digital vehicle diagnostic quote.",
     },
     {
       number: "02",
       title: "STEP TWO",
-      desc: "It Uses A Dictionary Of Over 200...",
+      desc: "Certified master mechanics perform precision OEM-grade repairs.",
     },
     {
       number: "03",
       title: "STEP THREE",
-      desc: "It Uses A Dictionary Of Over 200...",
+      desc: "Quality inspection road test and seamless customer pickup.",
     },
   ];
 
   return (
     <div className="space-y-8">
       {/* 1. Main Service Detail Image */}
-      <div className="relative w-full h-[320px] sm:h-[400px] rounded-2xl overflow-hidden shadow-md">
+      <div className="relative w-full h-[320px] sm:h-[420px] rounded-2xl overflow-hidden shadow-md bg-gray-100">
         <Image
-          src="/images/service_detail_main.jpg"
-          alt="Unique Car Engine Service"
+          src={service?.img || "/images/service_detail_main.jpg"}
+          alt={service?.title || "Car Doctor Service"}
           fill
           priority
           className="object-cover"
@@ -59,26 +68,27 @@ export default function ServiceContent() {
 
       {/* 2. Main Title & Description */}
       <div className="space-y-4">
-        <h2 className="text-3xl font-extrabold text-gray-900">
-          Unique Car Engine Service
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+          {service?.title || "Unique Car Engine Service"}
         </h2>
         <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
-          There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don&apos;t look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn&apos;t anything embarrassing hidden in the middle of text.
+          {service?.description ||
+            "There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable."}
         </p>
       </div>
 
       {/* 3. 4 Feature Cards (2x2 Grid) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {featureBoxes.map((box, idx) => (
+        {facilities.map((box, idx) => (
           <div
             key={idx}
             className="bg-gray-50/90 rounded-2xl p-6 border border-gray-200/80 border-t-4 border-t-[#FF3811] shadow-xs hover:shadow-md transition-shadow space-y-2"
           >
             <h3 className="font-bold text-lg text-gray-900">
-              {box.title}
+              {box.name}
             </h3>
             <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">
-              {box.desc}
+              {box.details}
             </p>
           </div>
         ))}
@@ -86,17 +96,17 @@ export default function ServiceContent() {
 
       {/* 4. Sub-paragraph Text */}
       <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
-        There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don&apos;t look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn&apos;t anything embarrassing hidden in the middle of text.
+        Car Doctor guarantees OEM standard replacement components, electronic sensor calibrations, and fluid checks performed according to factory service manuals.
       </p>
 
       {/* 5. 3 Simple Steps Process */}
       <div className="space-y-6 pt-4">
         <div className="space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+          <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
             3 Simple Steps to Process
-          </h2>
+          </h3>
           <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
-            There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don&apos;t look even slightly believable.
+            Our streamlined workflow ensures complete transparency from check-in to final road test delivery.
           </p>
         </div>
 
@@ -107,7 +117,6 @@ export default function ServiceContent() {
               key={step.number}
               className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow text-center flex flex-col items-center space-y-3"
             >
-              {/* Red Circle Step Badge */}
               <div className="w-14 h-14 rounded-full bg-[#FF3811]/15 text-[#FF3811] border-2 border-[#FF3811] flex items-center justify-center font-extrabold text-lg shadow-xs">
                 {step.number}
               </div>
@@ -143,7 +152,6 @@ export default function ServiceContent() {
           </button>
         </div>
       </div>
-
     </div>
   );
 }

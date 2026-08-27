@@ -2,15 +2,17 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, ShoppingBag, Menu, X, Wrench, LogOut, LayoutDashboard, UserCheck } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
+import axios from "axios";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuthStore();
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -28,7 +30,7 @@ export default function Navbar() {
   const baseNavLinks = [
     { name: "Home", href: "/" },
     { name: "About", href: "/#about" },
-    { name: "Services", href: "/services/1" },
+    { name: "Services", href: "/services" },
     { name: "Add Service", href: "/add-service" },
     { name: "Checkout", href: "/checkout" },
   ];
@@ -38,12 +40,21 @@ export default function Navbar() {
     ? baseNavLinks
     : [...baseNavLinks, { name: "Login", href: "/login" }];
 
-  const handleLogout = () => {
-    logout();
-    setIsProfileOpen(false);
-    setIsMenuOpen(false);
-    toast.success("Logged out successfully");
+  const handleLogout = async () => {
+    try {
+      await axios.get("/api/v1/auth/logout");
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      logout();
+      setIsProfileOpen(false);
+      setIsMenuOpen(false);
+      toast.success("Logged out successfully");
+      router.push("/login");
+      router.refresh();
+    }
   };
+
 
   const userInitial = user?.name ? user.name.trim().charAt(0).toUpperCase() : "U";
 

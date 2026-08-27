@@ -4,6 +4,7 @@ import { jwtVerify } from "jose";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default_car_doctor_secret_key_2026";
 
+
 async function verifyAuthToken(token?: string) {
   if (!token) return null;
   try {

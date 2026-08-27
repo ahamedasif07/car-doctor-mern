@@ -1,23 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { ArrowRight, FileText, Wrench } from "lucide-react";
+import type { IService } from "@/types";
 
-export default function ServiceSidebar() {
-  const [activeService, setActiveService] = useState("Full Car Repair");
+interface ServiceSidebarProps {
+  currentService?: IService;
+  allServices?: IService[];
+}
 
-  const services = [
-    "Full Car Repair",
-    "Engine Repair",
-    "Automatic Services",
-    "Engine Oil Change",
-    "Battery Charge",
-  ];
+export default function ServiceSidebar({
+  currentService,
+  allServices = [],
+}: ServiceSidebarProps) {
+  const currentId = currentService?._id;
+  const currentPrice = currentService?.price || "20.00";
 
   return (
     <aside className="space-y-8">
-      
       {/* 1. Services Menu Card */}
       <div className="bg-gray-50/90 rounded-2xl p-7 border border-gray-200/80 shadow-xs space-y-5">
         <h3 className="text-xl font-extrabold text-gray-900">
@@ -25,31 +26,38 @@ export default function ServiceSidebar() {
         </h3>
 
         <div className="space-y-3">
-          {services.map((item) => {
-            const isSelected = item === activeService;
-            return (
-              <button
-                key={item}
-                onClick={() => setActiveService(item)}
-                className={`w-full flex items-center justify-between p-4 rounded-xl font-bold text-base transition-all duration-300 cursor-pointer ${
-                  isSelected
-                    ? "bg-[#FF3811] text-white shadow-md"
-                    : "bg-white text-gray-700 hover:text-[#FF3811] hover:bg-gray-100 border border-gray-100"
-                }`}
-              >
-                <span>{item}</span>
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    isSelected ? "text-white" : "text-[#FF3811]"
+          {allServices.length > 0 ? (
+            allServices.map((item) => {
+              const itemId = item._id;
+              const isSelected = String(itemId) === String(currentId);
+
+              return (
+                <Link
+                  key={item._id}
+                  href={`/services/${item._id}`}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 ${
+                    isSelected
+                      ? "bg-[#FF3811] text-white shadow-md"
+                      : "bg-white text-gray-700 hover:text-[#FF3811] hover:bg-gray-100 border border-gray-100"
                   }`}
                 >
-                  <ArrowRight className="w-5 h-5" />
-                </div>
-              </button>
-            );
-          })}
+                  <span className="truncate pr-2">{item.title}</span>
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isSelected ? "text-white" : "text-[#FF3811]"
+                    }`}
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </div>
+                </Link>
+              );
+            })
+          ) : (
+            <p className="text-xs text-gray-500">No other services found.</p>
+          )}
         </div>
       </div>
+
 
       {/* 2. Download Section */}
       <div className="bg-[#151515] rounded-2xl p-7 text-white shadow-xl space-y-5">
@@ -63,7 +71,7 @@ export default function ServiceSidebar() {
               <FileText className="w-6 h-6 text-gray-300 group-hover:text-[#FF3811] transition-colors" />
               <div>
                 <h4 className="font-bold text-sm text-white">Our Brochure</h4>
-                <p className="text-xs text-gray-400">Download</p>
+                <p className="text-xs text-gray-400">Download PDF</p>
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#FF3811] text-white flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -75,8 +83,8 @@ export default function ServiceSidebar() {
             <div className="flex items-center gap-3">
               <FileText className="w-6 h-6 text-gray-300 group-hover:text-[#FF3811] transition-colors" />
               <div>
-                <h4 className="font-bold text-sm text-white">Company Details</h4>
-                <p className="text-xs text-gray-400">Download</p>
+                <h4 className="font-bold text-sm text-white">Company Specs</h4>
+                <p className="text-xs text-gray-400">Download Doc</p>
               </div>
             </div>
             <div className="w-10 h-10 rounded-lg bg-[#FF3811] text-white flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -110,7 +118,7 @@ export default function ServiceSidebar() {
         </div>
 
         <Link
-          href="#quote"
+          href="/#appointment"
           className="w-full inline-block py-3.5 px-6 bg-[#FF3811] text-white font-bold rounded-xl hover:bg-[#e02d08] transition-all duration-300 shadow-lg cursor-pointer"
         >
           Get A Quote
@@ -120,17 +128,16 @@ export default function ServiceSidebar() {
       {/* 4. Price & Proceed Checkout */}
       <div className="space-y-4 pt-2">
         <h3 className="text-2xl font-extrabold text-gray-900">
-          Price $250.00
+          Price: ${typeof currentPrice === "number" ? currentPrice.toFixed(2) : currentPrice}
         </h3>
 
         <Link
-          href="/checkout"
+          href={`/checkout?service_id=${currentId}`}
           className="block w-full py-4 text-center bg-[#FF3811] text-white font-extrabold text-base rounded-xl hover:bg-[#e02d08] transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer"
         >
-          Proceed Checkout
+          Proceed to Checkout
         </Link>
       </div>
-
     </aside>
   );
 }
