@@ -7,9 +7,10 @@ import Team from "@/components/home/Team";
 import Features from "@/components/home/Features";
 import Testimonial from "@/components/home/Testimonial";
 import ServiceService from "@/services/service.service";
+import type { IService } from "@/types";
 
 export default async function Home() {
-  let services = [];
+  let services: IService[] = [];
   try {
     services = await ServiceService.getAllServices();
   } catch (error) {

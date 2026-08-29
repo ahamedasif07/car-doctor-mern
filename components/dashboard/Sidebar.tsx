@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Users,
   Wrench,
+  PlusCircle,
   ShoppingCart,
   Settings,
   LogOut,
@@ -26,7 +27,8 @@ import axios from "axios";
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/dashboard/users", icon: Users, badge: "Live" },
-  { name: "Services", href: "/dashboard/services", icon: Wrench, count: 6 },
+  { name: "Services", href: "/dashboard/services", icon: Wrench },
+  { name: "Add Service", href: "/dashboard/services/add", icon: PlusCircle },
   { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart, count: 12 },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
@@ -155,6 +157,8 @@ export default function Sidebar() {
             const isActive =
               item.href === "/dashboard"
                 ? pathname === "/dashboard"
+                : item.href === "/dashboard/services"
+                ? pathname === "/dashboard/services"
                 : pathname.startsWith(item.href);
 
             return (

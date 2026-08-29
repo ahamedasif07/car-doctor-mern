@@ -22,6 +22,9 @@ function getPageDetails(pathname: string) {
   if (pathname.startsWith("/dashboard/users")) {
     return { title: "Users Management", subtitle: "Access control, roles & registered accounts" };
   }
+  if (pathname === "/dashboard/services/add" || pathname === "/dashboard/add-service") {
+    return { title: "Add New Service", subtitle: "Create and publish a new automotive service package" };
+  }
   if (pathname.startsWith("/dashboard/services")) {
     return { title: "Car Services Catalog", subtitle: "Manage repair services, diagnostics & pricing" };
   }

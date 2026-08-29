@@ -1,6 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import axios from "axios";
+import { toast } from "sonner";
 import {
   Wrench,
   Plus,
@@ -9,9 +13,11 @@ import {
   DollarSign,
   Clock,
   Star,
-  Edit,
   Trash2,
   ExternalLink,
+  Loader2,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import {
   Card,
@@ -26,92 +32,148 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 interface ServiceItem {
-  id: string;
+  _id?: string;
+  id?: string;
   title: string;
-  category: string;
-  price: string;
-  duration: string;
-  rating: number;
+  category?: string;
+  price: string | number;
+  duration?: string;
+  rating?: number;
   description: string;
-  status: "Active" | "Draft";
+  img?: string;
+  facility?: Array<{ name: string; details: string }>;
+  status?: "Active" | "Draft";
 }
 
-const initialServices: ServiceItem[] = [
+const fallbackServices: ServiceItem[] = [
   {
-    id: "SRV-01",
+    _id: "SRV-01",
     title: "Full Engine Diagnostics & Tune-Up",
     category: "Engine Repair",
-    price: "$250.00",
+    price: 250,
     duration: "2-3 hrs",
     rating: 4.9,
+    img: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80",
     description: "Complete computerized diagnostic scan, spark plug replacement, and throttle body tuning.",
-    status: "Active",
   },
   {
-    id: "SRV-02",
+    _id: "SRV-02",
     title: "Complete Brake Pad & Rotor Service",
     category: "Braking System",
-    price: "$180.00",
+    price: 180,
     duration: "1.5 hrs",
     rating: 4.8,
+    img: "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=800&q=80",
     description: "Front and rear ceramic brake pads replacement, rotor resurfacing, and fluid flush.",
-    status: "Active",
   },
   {
-    id: "SRV-03",
+    _id: "SRV-03",
     title: "Transmission Fluid & Filter Service",
     category: "Transmission",
-    price: "$220.00",
+    price: 220,
     duration: "2 hrs",
     rating: 4.9,
+    img: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80",
     description: "Full transmission fluid exchange with synthetic high-grade fluid and filter replacement.",
-    status: "Active",
   },
   {
-    id: "SRV-04",
+    _id: "SRV-04",
     title: "Air Conditioning (AC) Recharge & Repair",
     category: "Climate Control",
-    price: "$130.00",
+    price: 130,
     duration: "1 hr",
     rating: 4.7,
+    img: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=800&q=80",
     description: "R134a/R1234yf freon recharge, compressor check, and cabin pollen filter change.",
-    status: "Active",
   },
   {
-    id: "SRV-05",
+    _id: "SRV-05",
     title: "Full Synthetic Oil & Filter Change",
     category: "Maintenance",
-    price: "$65.00",
+    price: 65,
     duration: "45 mins",
     rating: 5.0,
-    description: "Up to 5 quarts of premium synthetic oil, OEM filter replacement, and 21-point safety inspection.",
-    status: "Active",
+    img: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80",
+    description: "Up to 5 quarts of premium synthetic oil, OEM filter replacement, and safety inspection.",
   },
   {
-    id: "SRV-06",
+    _id: "SRV-06",
     title: "Suspension & Wheel Alignment",
     category: "Suspension",
-    price: "$110.00",
+    price: 110,
     duration: "1 hr",
     rating: 4.8,
+    img: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=800&q=80",
     description: "Laser computerized 4-wheel alignment, strut check, and tire rotation.",
-    status: "Active",
   },
 ];
 
 export default function ServicesDashboardPage() {
-  const [services, setServices] = useState<ServiceItem[]>(initialServices);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const categories = ["All", "Engine Repair", "Braking System", "Transmission", "Maintenance", "Climate Control", "Suspension"];
+  const categories = [
+    "All",
+    "Engine Repair",
+    "Braking System",
+    "Transmission",
+    "Maintenance",
+    "Climate Control",
+    "Suspension",
+  ];
+
+  const fetchServices = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get("/api/v1/services");
+      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        setServices(res.data.data);
+      } else {
+        setServices(fallbackServices);
+      }
+    } catch (error) {
+      console.error("Failed to fetch services:", error);
+      setServices(fallbackServices);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete service "${title}"?`)) return;
+
+    setDeletingId(id);
+    try {
+      const res = await axios.delete(`/api/v1/services/${id}`);
+      if (res.data?.success) {
+        toast.success(`Service "${title}" deleted successfully`);
+        setServices((prev) => prev.filter((s) => (s._id || s.id) !== id));
+      } else {
+        toast.error(res.data?.error || "Failed to delete service");
+      }
+    } catch (error: any) {
+      console.error("Delete service error:", error);
+      toast.info("Deleted from view (mock item or offline)");
+      setServices((prev) => prev.filter((s) => (s._id || s.id) !== id));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filtered = services.filter((s) => {
-    const matchesCat = selectedCategory === "All" || s.category === selectedCategory;
+    const sCat = s.category || "Maintenance";
+    const matchesCat = selectedCategory === "All" || sCat.toLowerCase() === selectedCategory.toLowerCase();
     const matchesSearch =
       !search ||
       s.title.toLowerCase().includes(search.toLowerCase()) ||
-      s.description.toLowerCase().includes(search.toLowerCase());
+      s.description?.toLowerCase().includes(search.toLowerCase());
     return matchesCat && matchesSearch;
   });
 
@@ -125,18 +187,32 @@ export default function ServicesDashboardPage() {
               Service Offerings
             </h2>
             <Badge variant="brand" className="font-bold">
-              {services.length} Active
+              {services.length} Total
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Manage repair packages, diagnostic services, pricing, and duration.
+            Manage repair packages, diagnostic services, pricing, and catalog items.
           </p>
         </div>
 
-        <Button variant="brand" className="cursor-pointer">
-          <Plus className="w-4 h-4 mr-1.5" />
-          Add New Service
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchServices}
+            className="cursor-pointer"
+            title="Refresh Services"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+
+          <Link href="/dashboard/services/add">
+            <Button variant="brand" className="cursor-pointer shadow-md shadow-[#FF3811]/20 font-bold">
+              <Plus className="w-4 h-4 mr-1.5" />
+              Add New Service
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filter and Search */}
@@ -149,7 +225,7 @@ export default function ServicesDashboardPage() {
               placeholder="Search service name or description..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-10"
             />
           </div>
 
@@ -160,7 +236,7 @@ export default function ServicesDashboardPage() {
                 variant={selectedCategory === c ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedCategory(c)}
-                className="text-xs cursor-pointer whitespace-nowrap"
+                className="text-xs cursor-pointer whitespace-nowrap h-8"
               >
                 {c}
               </Button>
@@ -169,57 +245,133 @@ export default function ServicesDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Loading state */}
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-[#FF3811] animate-spin" />
+          <span className="ml-3 text-sm text-gray-500 font-medium">Loading car services...</span>
+        </div>
+      )}
+
       {/* Services Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map((srv) => (
-          <Card
-            key={srv.id}
-            className="border-gray-200/80 shadow-xs hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between group"
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-2">
-                <Badge variant="secondary" className="text-[11px] font-semibold">
-                  {srv.category}
-                </Badge>
-                <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/40">
-                  <Star className="w-3 h-3 fill-amber-500" />
-                  {srv.rating}
-                </div>
+      {!loading && (
+        <>
+          {filtered.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-xs">
+              <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-700 font-bold text-base">No services found</p>
+              <p className="text-gray-400 text-xs mt-1">
+                Try adjusting your search filter or click &ldquo;Add New Service&rdquo; to create one.
+              </p>
+              <div className="mt-4">
+                <Link href="/dashboard/services/add">
+                  <Button variant="brand" size="sm">
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    Create First Service
+                  </Button>
+                </Link>
               </div>
-              <CardTitle className="text-base sm:text-lg mt-2 group-hover:text-[#FF3811] transition-colors">
-                {srv.title}
-              </CardTitle>
-              <CardDescription className="line-clamp-2 text-xs text-gray-500">
-                {srv.description}
-              </CardDescription>
-            </CardHeader>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filtered.map((srv) => {
+                const srvId = srv._id || srv.id || "";
+                const displayPrice =
+                  typeof srv.price === "number"
+                    ? `$${srv.price.toFixed(2)}`
+                    : srv.price?.toString().startsWith("$")
+                    ? srv.price
+                    : `$${srv.price}`;
 
-            <CardContent className="py-2">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                  <Clock className="w-3.5 h-3.5 text-gray-400" />
-                  <span>{srv.duration}</span>
-                </div>
-                <div className="text-base font-black text-gray-900">
-                  {srv.price}
-                </div>
-              </div>
-            </CardContent>
+                return (
+                  <Card
+                    key={srvId}
+                    className="border-gray-200/80 shadow-xs hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between group overflow-hidden"
+                  >
+                    <div>
+                      {/* Image Thumbnail */}
+                      {srv.img && (
+                        <div className="relative w-full h-40 bg-gray-100 overflow-hidden">
+                          <Image
+                            src={srv.img}
+                            alt={srv.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            unoptimized
+                          />
+                          <div className="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-md px-2.5 py-0.5 rounded-full text-white text-xs font-bold">
+                            {displayPrice}
+                          </div>
+                        </div>
+                      )}
 
-            <CardFooter className="pt-3 border-t border-gray-100 flex items-center justify-between">
-              <span className="text-[11px] font-mono text-gray-400">{srv.id}</span>
-              <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-gray-600">
-                  <Edit className="w-3.5 h-3.5 mr-1" /> Edit
-                </Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-xs text-red-500 hover:bg-red-50">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+                      <CardHeader className="pb-2 pt-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <Badge variant="secondary" className="text-[11px] font-semibold">
+                            {srv.category || "General Service"}
+                          </Badge>
+                          <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/40">
+                            <Star className="w-3 h-3 fill-amber-500" />
+                            {srv.rating || 4.9}
+                          </div>
+                        </div>
+                        <CardTitle className="text-base sm:text-lg mt-2 group-hover:text-[#FF3811] transition-colors line-clamp-1">
+                          {srv.title}
+                        </CardTitle>
+                        <CardDescription className="line-clamp-2 text-xs text-gray-500">
+                          {srv.description}
+                        </CardDescription>
+                      </CardHeader>
+
+                      <CardContent className="py-2">
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                            <Clock className="w-3.5 h-3.5 text-gray-400" />
+                            <span>{srv.duration || "1-2 hrs"}</span>
+                          </div>
+                          <div className="text-base font-black text-gray-900">
+                            {displayPrice}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </div>
+
+                    <CardFooter className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                      <span className="text-[11px] font-mono text-gray-400 truncate max-w-[120px]">
+                        {srvId.length > 8 ? `${srvId.slice(0, 8)}...` : srvId}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/services/${srvId}`}
+                          target="_blank"
+                          className="inline-flex items-center justify-center h-8 px-2.5 rounded-lg text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                          title="View on Live Site"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 mr-1" /> View
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={deletingId === srvId}
+                          onClick={() => handleDelete(srvId, srv.title)}
+                          className="h-8 px-2.5 text-xs text-red-500 hover:bg-red-50 cursor-pointer"
+                          title="Delete Service"
+                        >
+                          {deletingId === srvId ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
