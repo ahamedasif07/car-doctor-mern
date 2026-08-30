@@ -9,15 +9,12 @@ import {
   Wrench,
   Plus,
   Search,
-  CheckCircle2,
-  DollarSign,
   Clock,
   Star,
   Trash2,
   ExternalLink,
   Loader2,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
 import {
   Card,
@@ -30,18 +27,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { IService, ApiResponse } from "@/types";
 
-interface ServiceItem {
-  _id?: string;
+export interface ServiceItem extends IService {
   id?: string;
-  title: string;
   category?: string;
-  price: string | number;
   duration?: string;
   rating?: number;
-  description: string;
-  img?: string;
-  facility?: Array<{ name: string; details: string }>;
   status?: "Active" | "Draft";
 }
 
@@ -125,10 +117,12 @@ export default function ServicesDashboardPage() {
     "Suspension",
   ];
 
-  const fetchServices = async () => {
-    setLoading(true);
+  const fetchServices = React.useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
-      const res = await axios.get("/api/v1/services");
+      const res = await axios.get<ApiResponse<ServiceItem[]>>("/api/v1/services");
       if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
         setServices(res.data.data);
       } else {
@@ -140,10 +134,38 @@ export default function ServicesDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchServices();
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        const res = await axios.get<ApiResponse<ServiceItem[]>>("/api/v1/services");
+        if (isMounted) {
+          if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+            setServices(res.data.data);
+          } else {
+            setServices(fallbackServices);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Failed to fetch services:", error);
+          setServices(fallbackServices);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleDelete = async (id: string, title: string) => {
@@ -151,17 +173,21 @@ export default function ServicesDashboardPage() {
 
     setDeletingId(id);
     try {
-      const res = await axios.delete(`/api/v1/services/${id}`);
+      const res = await axios.delete<ApiResponse>(`/api/v1/services/${id}`);
       if (res.data?.success) {
         toast.success(`Service "${title}" deleted successfully`);
-        setServices((prev) => prev.filter((s) => (s._id || s.id) !== id));
+        setServices((prev) => prev.filter((s) => (s._id || s.id || s.service_id) !== id));
       } else {
         toast.error(res.data?.error || "Failed to delete service");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Delete service error:", error);
-      toast.info("Deleted from view (mock item or offline)");
-      setServices((prev) => prev.filter((s) => (s._id || s.id) !== id));
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.info("Deleted from view (mock item or offline)");
+        setServices((prev) => prev.filter((s) => (s._id || s.id || s.service_id) !== id));
+      }
     } finally {
       setDeletingId(null);
     }
@@ -172,8 +198,8 @@ export default function ServicesDashboardPage() {
     const matchesCat = selectedCategory === "All" || sCat.toLowerCase() === selectedCategory.toLowerCase();
     const matchesSearch =
       !search ||
-      s.title.toLowerCase().includes(search.toLowerCase()) ||
-      s.description?.toLowerCase().includes(search.toLowerCase());
+      (s.title && s.title.toLowerCase().includes(search.toLowerCase())) ||
+      (s.description && s.description.toLowerCase().includes(search.toLowerCase()));
     return matchesCat && matchesSearch;
   });
 
@@ -199,7 +225,7 @@ export default function ServicesDashboardPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchServices}
+            onClick={() => fetchServices(true)}
             className="cursor-pointer"
             title="Refresh Services"
           >
@@ -275,17 +301,19 @@ export default function ServicesDashboardPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filtered.map((srv) => {
-                const srvId = srv._id || srv.id || "";
+                const srvId = srv._id || srv.id || srv.service_id || "";
                 const displayPrice =
                   typeof srv.price === "number"
                     ? `$${srv.price.toFixed(2)}`
-                    : srv.price?.toString().startsWith("$")
-                    ? srv.price
-                    : `$${srv.price}`;
+                    : srv.price
+                    ? srv.price.toString().startsWith("$")
+                      ? srv.price
+                      : `$${srv.price}`
+                    : "$0.00";
 
                 return (
                   <Card
-                    key={srvId}
+                    key={srvId || srv.title}
                     className="border-gray-200/80 shadow-xs hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between group overflow-hidden"
                   >
                     <div>
@@ -375,3 +403,4 @@ export default function ServicesDashboardPage() {
     </div>
   );
 }
+
